@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+project/node_modules/
+desktop/node_modules/
+
+# Build outputs
+dist/
+dist-core/
+desktop/dist/
+desktop/dist-core/
+project/dist/
+build/
+out/
+
+# Downloaded archives and temporary extraction
+*.zip
+*.bundle
+desktop/core-downloads/
+tmp_7z_test/
+
+# Bundled runtime binaries are downloaded by scripts/download-cores.ps1
+desktop/bin/
+
+# Local environment
+.env
+.env.*
+!.env.example
+.expo/
+.eas/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# App Store credentials and signing files
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*.p8

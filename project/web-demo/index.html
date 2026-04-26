@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VPN Client - Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d0d1a;
+            color: #eaeaea;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .phone-frame {
+            width: 100%;
+            max-width: 414px;
+            height: 100vh;
+            max-height: 896px;
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: none;
+        }
+        .screen.active { display: block; }
+        .tab-bar {
+            display: flex;
+            background: #16213e;
+            border-top: 1px solid #2a2a4a;
+            padding: 8px 0;
+            justify-content: space-around;
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px 12px;
+        }
+        .tab-item svg {
+            width: 24px;
+            height: 24px;
+            fill: #a0a0a0;
+            transition: fill 0.2s;
+        }
+        .tab-item.active svg { fill: #e94560; }
+        .tab-item span {
+            font-size: 11px;
+            color: #a0a0a0;
+            margin-top: 2px;
+        }
+        .tab-item.active span { color: #e94560; }
+        
+        /* Home Screen */
+        .status-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            margin-top: 8px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .connect-btn {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .connect-btn:active { transform: scale(0.95); }
+        .connect-btn svg { width: 48px; height: 48px; fill: white; }
+        .connect-btn span {
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 32px;
+        }
+        .stat-box {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 12px 16px;
+            text-align: center;
+            border: 1px solid #2a2a4a;
+            min-width: 90px;
+        }
+        .stat-box svg { width: 20px; height: 20px; }
+        .stat-value { font-size: 14px; font-weight: 700; margin-top: 4px; }
+        .stat-label { font-size: 11px; color: #a0a0a0; margin-top: 2px; }
+        
+        .section-title {
+            color: #a0a0a0;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .config-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+        }
+        .config-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        .config-icon svg { width: 24px; height: 24px; }
+        .config-info { flex: 1; }
+        .config-name { font-size: 15px; font-weight: 600; }
+        .config-meta { display: flex; gap: 6px; margin-top: 4px; align-items: center; }
+        .config-proto { font-size: 11px; font-weight: 700; }
+        .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+        .badge-reality { background: #e9456020; color: #e94560; }
+        .badge-tls { background: #4CAF5020; color: #4CAF50; }
+        
+        /* Configs Screen */
+        .empty-state {
+            text-align: center;
+            padding: 64px 32px;
+        }
+        .empty-state svg { width: 64px; height: 64px; fill: #6c6c6c; }
+        .empty-title { font-size: 20px; color: #6c6c6c; font-weight: 600; margin-top: 16px; }
+        .empty-sub { font-size: 14px; color: #6c6c6c; margin-top: 8px; }
+        .config-list { display: flex; flex-direction: column; gap: 12px; }
+        .config-list-item {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .config-list-item.selected { border-color: #e94560; background: #0f3460; }
+        .list-icon {
+            width: 40px; height: 40px; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 12px;
+        }
+        .list-icon svg { width: 20px; height: 20px; }
+        .list-info { flex: 1; }
+        .list-name { font-size: 14px; font-weight: 600; }
+        .list-badges { display: flex; gap: 4px; margin-top: 2px; }
+        .list-actions { display: flex; gap: 4px; }
+        .list-actions button {
+            background: none; border: none; cursor: pointer;
+            padding: 6px; border-radius: 6px;
+        }
+        .list-actions button:hover { background: rgba(255,255,255,0.05); }
+        .list-actions svg { width: 18px; height: 18px; }
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 24px;
+            width: 56px; height: 56px;
+            border-radius: 28px;
+            background: #e94560;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(233,69,96,0.4);
+            z-index: 100;
+        }
+        .fab svg { width: 28px; height: 28px; fill: white; }
+        
+        /* Logs Screen */
+        .log-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .log-filter {
+            padding: 4px 12px;
+            border-radius: 16px;
+            background: #16213e;
+            border: 1px solid #2a2a4a;
+            font-size: 12px;
+            cursor: pointer;
+            color: #a0a0a0;
+        }
+        .log-filter.active {
+            background: rgba(233,69,96,0.15);
+            border-color: #e94560;
+            color: #e94560;
+        }
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 6px 0;
+            border-bottom: 1px solid #2a2a4a;
+            font-size: 12px;
+        }
+        .log-item svg { width: 14px; height: 14px; margin-right: 6px; margin-top: 2px; flex-shrink: 0; }
+        .log-time { color: #6c6c6c; margin-right: 6px; font-family: monospace; }
+        .log-tag { color: #6c6c6c; margin-right: 6px; font-family: monospace; }
+        .log-msg { flex: 1; color: #eaeaea; }
+        
+        /* Settings Screen */
+        .settings-section {
+            background: #16213e;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #2a2a4a;
+            overflow: hidden;
+        }
+        .settings-section-title {
+            color: #a0a0a0;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 16px 6px;
+        }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-top: 1px solid #2a2a4a;
+        }
+        .setting-icon {
+            width: 32px; height: 32px; border-radius: 16px;
+            background: #0f3460;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 12px;
+        }
+        .setting-icon svg { width: 16px; height: 16px; }
+        .setting-content { flex: 1; }
+        .setting-label { font-size: 14px; font-weight: 600; }
+        .setting-desc { font-size: 12px; color: #a0a0a0; margin-top: 2px; }
+        .toggle {
+            width: 44px; height: 24px; border-radius: 12px;
+            background: #2a2a4a;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle.active { background: #e9456080; }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #a0a0a0;
+            top: 2px; left: 2px;
+            transition: all 0.2s;
+        }
+        .toggle.active::after {
+            left: 22px;
+            background: #e94560;
+        }
+        .warning-box {
+            display: flex;
+            background: rgba(255,193,7,0.1);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255,193,7,0.2);
+            gap: 8px;
+        }
+        .warning-box svg { width: 20px; height: 20px; fill: #FFC107; flex-shrink: 0; }
+        .warning-box p { font-size: 12px; color: #FFC107; line-height: 1.5; }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-pulse { animation: pulse 1s infinite; }
+        
+        /* Add Config Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 16px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 360px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-label { font-size: 12px; color: #a0a0a0; font-weight: 600; margin-bottom: 4px; display: block; }
+        .form-input {
+            width: 100%;
+            background: #0f3460;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 12px;
+            color: #eaeaea;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-input:focus { border-color: #e94560; }
+        .form-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-secondary { background: #0f3460; color: #eaeaea; }
+        .btn-primary { background: #e94560; color: white; }
+        .tab-bar-top {
+            display: flex;
+            background: #16213e;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            gap: 4px;
+        }
+        .tab-top {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #a0a0a0;
+        }
+        .tab-top.active { background: #0f3460; color: #e94560; font-weight: 600; }
+        .hint { color: #6c6c6c; font-size: 12px; margin-top: 4px; }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #0f3460;
+            border: 1px solid #2a2a4a;
+            font-size: 12px;
+            cursor: pointer;
+            color: #a0a0a0;
+        }
+        .chip.active { background: #e9456030; border-color: #e94560; color: #e94560; font-weight: 600; }
+        .reality-box {
+            background: #0f3460;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #e9456040;
+            margin-bottom: 8px;
+        }
+        .reality-title { color: #e94560; font-weight: 700; margin-bottom: 8px; }
+        .sub-list { max-height: 300px; overflow-y: auto; }
+        .sub-item {
+            display: flex;
+            align-items: center;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .sub-icon {
+            width: 32px; height: 32px; border-radius: 16px;
+            background: #e9456015;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 10px;
+        }
+        .sub-icon svg { width: 16px; height: 16px; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <!-- Home Screen -->
+        <div class="screen active" id="screen-home">
+            <div class="status-section">
+                <div class="status-dot" id="status-dot" style="background: #6c6c6c;"></div>
+                <span class="status-text" id="status-text" style="color: #6c6c6c;">Не подключено</span>
+            </div>
+            <div class="connect-btn" id="connect-btn" style="background: #e94560;" onclick="toggleConnection()">
+                <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9 9 9 0 0 0-9-9zm0 16a7 7 0 0 1-7-7 7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7z"/></svg>
+                <span id="btn-text">Подключиться</span>
+            </div>
+            <div class="stats-row" id="stats-row" style="display: none;">
+                <div class="stat-box">
+                    <svg viewBox="0 0 24 24" fill="#2196F3"><path d="M12 16l-6-6h4V4h4v6h4z"/></svg>
+                    <div class="stat-value" id="stat-down">0 B/s</div>
+                    <div class="stat-label">Загрузка</div>
+                </div>
+                <div class="stat-box">
+                    <svg viewBox="0 0 24 24" fill="#ff6b6b"><path d="M12 8l6 6h-4v6h-4v-6H6z"/></svg>
+                    <div class="stat-value" id="stat-up">0 B/s</div>
+                    <div class="stat-label">Отправка</div>
+                </div>
+                <div class="stat-box">
+                    <svg viewBox="0 0 24 24" fill="#FFC107"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+                    <div class="stat-value" id="stat-time">00:00:00</div>
+                    <div class="stat-label">Время</div>
+                </div>
+            </div>
+            <div class="section-title">Текущая конфигурация</div>
+            <div class="config-card" id="home-config">
+                <div class="config-icon" style="background: rgba(233,69,96,0.12);">
+                    <svg viewBox="0 0 24 24" fill="#e94560"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                </div>
+                <div class="config-info">
+                    <div class="config-name" id="home-config-name">Добавьте сервер</div>
+                    <div class="config-meta" id="home-config-meta"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configs Screen -->
+        <div class="screen" id="screen-configs">
+            <div id="configs-empty" class="empty-state" style="display: none;">
+                <svg viewBox="0 0 24 24"><path d="M5 12c0 5.5 4.5 10 10 10s10-4.5 10-10S20.5 2 15 2 5 6.5 5 12zm2 0c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8-8-3.6-8-8z"/></svg>
+                <div class="empty-title">Нет конфигураций</div>
+                <div class="empty-sub">Нажмите + чтобы добавить сервер</div>
+            </div>
+            <div class="config-list" id="config-list"></div>
+            <div class="fab" onclick="showAddModal()">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </div>
+        </div>
+        
+        <!-- Stats Screen -->
+        <div class="screen" id="screen-stats">
+            <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 20px;">Статистика</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div class="stat-box" style="min-width: auto;">
+                    <svg viewBox="0 0 24 24" fill="#2196F3" style="width: 24px; height: 24px; margin-bottom: 4px;"><path d="M12 16l-6-6h4V4h4v6h4z"/></svg>
+                    <div class="stat-value" id="stats-total-down">0 B</div>
+                    <div class="stat-label">Загрузка</div>
+                </div>
+                <div class="stat-box" style="min-width: auto;">
+                    <svg viewBox="0 0 24 24" fill="#ff6b6b" style="width: 24px; height: 24px; margin-bottom: 4px;"><path d="M12 8l6 6h-4v6h-4v-6H6z"/></svg>
+                    <div class="stat-value" id="stats-total-up">0 B</div>
+                    <div class="stat-label">Отправка</div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="settings-section-title">Текущее соединение</div>
+                <div class="setting-row">
+                    <div class="setting-content">
+                        <div class="setting-label">Статус</div>
+                    </div>
+                    <div id="stats-status" style="color: #6c6c6c; font-weight: 600;">Отключено</div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-content">
+                        <div class="setting-label">Сервер</div>
+                    </div>
+                    <div id="stats-server" style="color: #a0a0a0;">—</div>
+                </div>
+            </div>
+            <div class="warning-box" style="margin-top: 16px;">
+                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <p>В демонстрационном режиме статистика генерируется симуляцией. В реальном приложении здесь будут реальные данные трафика из VPN-туннеля.</p>
+            </div>
+        </div>
+        
+        <!-- Logs Screen -->
+        <div class="screen" id="screen-logs">
+            <div class="log-filters">
+                <div class="log-filter active" onclick="setLogFilter('all')">Все</div>
+                <div class="log-filter" onclick="setLogFilter('debug')">Debug</div>
+                <div class="log-filter" onclick="setLogFilter('info')">Info</div>
+                <div class="log-filter" onclick="setLogFilter('warning')">Warn</div>
+                <div class="log-filter" onclick="setLogFilter('error')">Error</div>
+            </div>
+            <div id="logs-container">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="#6c6c6c" style="width: 48px; height: 48px;"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z"/></svg>
+                    <div class="empty-title">Логов пока нет</div>
+                    <div class="empty-sub">Логи появятся после подключения</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Screen -->
+        <div class="screen" id="screen-settings">
+            <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 20px;">Настройки</h2>
+            
+            <div class="settings-section">
+                <div class="settings-section-title">Общие</div>
+                <div class="setting-row">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#e94560"><path d="M9 2c-1.05 0-2.05.16-3 .46 1.78.61 3.55 1.54 5.23 2.78C12.7 4.1 13.35 3.03 14 2c-1.6-.66-3.3-1-5-1zM6 4.54c-1.78.61-3.55 1.54-5.23 2.78C.3 6.64-.35 7.7-1 8.76c1.6.66 3.3 1 5 1 1.05 0 2.05-.16 3-.46-1.78-.61-3.55-1.54-5.23-2.78C3.3 5.9 2.65 4.84 2 3.78 3.6 3.12 5.3 2.78 7 2.78c1.05 0 2.05.16 3 .46-.78.26-1.55.66-2.27 1.18-.72.52-1.38 1.14-1.97 1.84-.59.7-1.1 1.48-1.51 2.32-.41.84-.72 1.74-.92 2.68-.2.94-.3 1.9-.3 2.86 0 1.96.39 3.84 1.17 5.6.78 1.76 1.92 3.28 3.38 4.52 1.46 1.24 3.16 2.14 5.06 2.68-.26-.78-.66-1.55-1.18-2.27-.52-.72-1.14-1.38-1.84-1.97-.7-.59-1.48-1.1-2.32-1.51-.84-.41-1.74-.72-2.68-.92-.94-.2-1.9-.3-2.86-.3-1.96 0-3.84.39-5.6 1.17-1.76.78-3.28 1.92-4.52 3.38-1.24 1.46-2.14 3.16-2.68 5.06.78.26 1.55.66 2.27 1.18.72.52 1.38 1.14 1.97 1.84.59.7 1.1 1.48 1.51 2.32.41.84.72 1.74.92 2.68.2.94.3 1.9.3 2.86 0 1.96-.39 3.84-1.17 5.6-.78 1.76-1.92 3.28-3.38 4.52-1.46 1.24-3.16 2.14-5.06 2.68z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">Темная тема</div>
+                        <div class="setting-desc">Использовать темную тему</div>
+                    </div>
+                    <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#4CAF50"><path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 2c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.22 1.21 4.15 3 5.19l1-1.74c-1.19-.7-2-1.97-2-3.45 0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.48-.81 2.75-2 3.45l1 1.74c1.79-1.04 3-2.97 3-5.19zM12 3C6.48 3 2 7.48 2 13c0 3.7 2.01 6.92 4.99 8.65l1-1.74C5.18 18.1 4 15.73 4 13c0-4.42 3.58-8 8-8s8 3.58 8 8c0 2.73-1.18 5.1-3.01 6.91l1 1.74C19.99 19.92 22 16.7 22 13c0-5.52-4.48-10-10-10z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">Обход LAN</div>
+                        <div class="setting-desc">Не проксировать локальные адреса</div>
+                    </div>
+                    <div class="toggle active" onclick="this.classList.toggle('active')"></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#FFC107"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">Автоподключение</div>
+                        <div class="setting-desc">Подключаться при запуске</div>
+                    </div>
+                    <div class="toggle" onclick="this.classList.toggle('active')"></div>
+                </div>
+            </div>
+            
+        <div class="settings-section">
+                <div class="settings-section-title">Приложения</div>
+                <div class="setting-row" onclick="alert('Split Tunneling — выбор приложений для VPN. Доступно в полной версии.')">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#2196F3"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">Избирательное туннелирование</div>
+                        <div class="setting-desc">Выбрать приложения для VPN</div>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="#a0a0a0" style="width: 20px; height: 20px;"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+            </div>
+                <div class="setting-row">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#2196F3"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">DNS сервер</div>
+                        <div class="setting-desc">Текущий: 1.1.1.1</div>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="#a0a0a0" style="width: 20px; height: 20px;"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-icon"><svg viewBox="0 0 24 24" fill="#533483"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg></div>
+                    <div class="setting-content">
+                        <div class="setting-label">MTU</div>
+                        <div class="setting-desc">Размер пакета: 1500</div>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="#a0a0a0" style="width: 20px; height: 20px;"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+            </div>
+            
+            <div class="warning-box">
+                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <p>Это демонстрационная версия. Для реальной VPN-функциональности требуется интеграция нативных VPN-модулей.</p>
+            </div>
+        </div>
+        
+        <!-- Add Config Modal -->
+        <div class="modal-overlay" id="add-modal">
+            <div class="modal-content">
+                <div class="modal-title">Добавить конфигурацию</div>
+                <div class="tab-bar-top">
+                    <div class="tab-top active" onclick="setAddTab(this, 'manual')">Вручную</div>
+                    <div class="tab-top" onclick="setAddTab(this, 'link')">Ссылка</div>
+                    <div class="tab-top" onclick="setAddTab(this, 'subscription')">Подписка</div>
+                </div>
+                
+                <div id="add-manual">
+                    <div class="form-group">
+                        <label class="form-label">Протокол</label>
+                        <select class="form-input" id="form-protocol" onchange="onProtocolChange()">
+                            <option value="vless">VLESS</option>
+                            <option value="vmess">VMess</option>
+                            <option value="shadowsocks">Shadowsocks</option>
+                            <option value="trojan">Trojan</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Название</label>
+                        <input class="form-input" id="form-name" placeholder="Мой сервер">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Адрес сервера</label>
+                        <input class="form-input" id="form-server" placeholder="domain.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Порт</label>
+                        <input class="form-input" id="form-port" placeholder="443" type="number">
+                    </div>
+                    <div class="form-group" id="form-auth-group">
+                        <label class="form-label" id="form-auth-label">UUID</label>
+                        <input class="form-input" id="form-auth" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Security</label>
+                        <div class="chip-row" id="security-chips">
+                            <div class="chip" onclick="setSecurity('', this)">none</div>
+                            <div class="chip active" onclick="setSecurity('tls', this)">tls</div>
+                            <div class="chip" onclick="setSecurity('reality', this)">reality</div>
+                        </div>
+                    </div>
+                    <div id="reality-fields" style="display: none;">
+                        <div class="reality-box">
+                            <div class="reality-title">XTLS Reality</div>
+                            <div class="form-group">
+                                <label class="form-label">Public Key (pbk)</label>
+                                <input class="form-input" id="form-pbk" placeholder="x25519 public key">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Short ID (sid)</label>
+                                <input class="form-input" id="form-sid" placeholder="Short ID">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fingerprint (fp)</label>
+                                <div class="chip-row">
+                                    <div class="chip active" onclick="setFp('chrome', this)">chrome</div>
+                                    <div class="chip" onclick="setFp('firefox', this)">firefox</div>
+                                    <div class="chip" onclick="setFp('safari', this)">safari</div>
+                                    <div class="chip" onclick="setFp('ios', this)">ios</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-buttons">
+                        <button class="btn btn-secondary" onclick="hideAddModal()">Отмена</button>
+                        <button class="btn btn-primary" onclick="saveConfig()">Сохранить</button>
+                    </div>
+                </div>
+                
+                <div id="add-link" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Вставьте ссылку</label>
+                        <textarea class="form-input" rows="4" id="link-input" placeholder="vless://uuid@server:port?security=reality&pbk=...&sid=...&fp=chrome..."></textarea>
+                    </div>
+                    <p class="hint">Поддерживаются: vless://, vmess://, ss://, trojan://</p>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="parseLinkInput()">Распознать</button>
+                    <div class="form-buttons" style="margin-top: 12px;">
+                        <button class="btn btn-secondary" onclick="hideAddModal()">Отмена</button>
+                    </div>
+                </div>
+                
+                <div id="add-subscription" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">URL подписки</label>
+                        <textarea class="form-input" rows="3" id="sub-input" placeholder="https://example.com/sub/example-token"></textarea>
+                    </div>
+                    <p class="hint">Подписка возвращает список ссылок (base64 или plain text)</p>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 8px;" onclick="parseSubscriptionDemo()">Загрузить подписку</button>
+                    
+                    <div id="sub-preview" style="display: none; margin-top: 16px;">
+                        <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Найдено конфигураций:</div>
+                        <div class="sub-list" id="sub-list"></div>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 12px;" onclick="saveSubscriptionConfigs()">Импортировать все</button>
+                    </div>
+                    
+                    <div class="form-buttons" style="margin-top: 12px;">
+                        <button class="btn btn-secondary" onclick="hideAddModal()">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <div class="tab-item active" onclick="switchTab('home', this)">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                <span>Главная</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('configs', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                <span>Конфиги</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('stats', this)">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Статистика</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('logs', this)">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <span>Логи</span>
+            </div>
+            <div class="tab-item" onclick="switchTab('settings', this)">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.488.488 0 0 0-.59.22L3.16 8.87c-.08.15-.04.34.11.45l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                <span>Настройки</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let configs = JSON.parse(localStorage.getItem('vpn_configs') || '[]');
+        let isConnected = false;
+        let connectionInterval = null;
+        let duration = 0;
+        let activeConfigId = null;
+        let logs = [];
+        let currentSecurity = 'tls';
+        let currentFp = 'chrome';
+        let subscriptionConfigs = [];
+        
+        function switchTab(tab, el) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + tab).classList.add('active');
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            if (tab === 'configs') renderConfigs();
+        }
+        
+        function getProtocolColor(p) {
+            const colors = { vmess: '#2196F3', vless: '#e94560', shadowsocks: '#533483', trojan: '#4CAF50' };
+            return colors[p] || '#a0a0a0';
+        }
+        
+        function getProtocolPath(p) {
+            const paths = {
+                vmess: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z',
+                vless: 'M7 2v11h3v9l7-12h-4l4-8z',
+                shadowsocks: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z',
+                trojan: 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+            };
+            return paths[p] || paths.vmess;
+        }
+        
+        function renderConfigs() {
+            const list = document.getElementById('config-list');
+            const empty = document.getElementById('configs-empty');
+            if (configs.length === 0) {
+                list.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            list.style.display = 'flex';
+            empty.style.display = 'none';
+            list.innerHTML = configs.map(c => `
+                <div class="config-list-item ${c.id === activeConfigId ? 'selected' : ''}">
+                    <div class="list-icon" style="background: ${getProtocolColor(c.protocol)}30;">
+                        <svg viewBox="0 0 24 24" fill="${getProtocolColor(c.protocol)}" style="width: 20px; height: 20px;">
+                            <path d="${getProtocolPath(c.protocol)}"/>
+                        </svg>
+                    </div>
+                    <div class="list-info" onclick="selectConfig('${c.id}')">
+                        <div class="list-name">${c.name}</div>
+                        <div class="list-badges">
+                            <span class="badge badge-${c.security === 'reality' ? 'reality' : 'tls'}">${c.protocol.toUpperCase()}</span>
+                            ${c.security === 'reality' ? '<span class="badge badge-reality">REALITY</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="list-actions">
+                        <button onclick="deleteConfig('${c.id}')">
+                            <svg viewBox="0 0 24 24" fill="#F44336"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function selectConfig(id) {
+            activeConfigId = id;
+            const cfg = configs.find(c => c.id === id);
+            if (cfg) {
+                document.getElementById('home-config-name').textContent = cfg.name;
+                const meta = document.getElementById('home-config-meta');
+                let html = `<span class="config-proto" style="color: ${getProtocolColor(cfg.protocol)};">${cfg.protocol.toUpperCase()}</span>`;
+                if (cfg.security === 'reality') {
+                    html += `<span class="badge badge-reality">Reality</span>`;
+                }
+                meta.innerHTML = html;
+            }
+            renderConfigs();
+        }
+        
+        function deleteConfig(id) {
+            configs = configs.filter(c => c.id !== id);
+            localStorage.setItem('vpn_configs', JSON.stringify(configs));
+            if (activeConfigId === id) {
+                activeConfigId = null;
+                document.getElementById('home-config-name').textContent = 'Добавьте сервер';
+                document.getElementById('home-config-meta').innerHTML = '';
+            }
+            renderConfigs();
+        }
+        
+        function toggleConnection() {
+            if (isConnected) {
+                isConnected = false;
+                clearInterval(connectionInterval);
+                document.getElementById('connect-btn').style.background = '#e94560';
+                document.getElementById('btn-text').textContent = 'Подключиться';
+                document.getElementById('connect-btn').classList.remove('animate-pulse');
+                document.getElementById('status-dot').style.background = '#6c6c6c';
+                document.getElementById('status-text').textContent = 'Не подключено';
+                document.getElementById('status-text').style.color = '#6c6c6c';
+                document.getElementById('stats-row').style.display = 'none';
+                document.getElementById('stats-status').textContent = 'Отключено';
+                document.getElementById('stats-status').style.color = '#6c6c6c';
+                addLog('info', 'Connection terminated by user');
+            } else {
+                const cfg = configs.find(c => c.id === activeConfigId);
+                if (!cfg && configs.length > 0) {
+                    selectConfig(configs[0].id);
+                }
+                if (!activeConfigId) {
+                    alert('Сначала добавьте и выберите конфигурацию');
+                    return;
+                }
+                
+                document.getElementById('connect-btn').style.background = '#FFC107';
+                document.getElementById('btn-text').textContent = 'Подключение...';
+                document.getElementById('connect-btn').classList.add('animate-pulse');
+                document.getElementById('status-dot').style.background = '#FFC107';
+                document.getElementById('status-text').textContent = 'Подключение...';
+                document.getElementById('status-text').style.color = '#FFC107';
+                
+                const targetCfg = configs.find(c => c.id === activeConfigId);
+                addLog('info', `Starting connection to ${targetCfg.server}:${targetCfg.port}`);
+                addLog('info', `Protocol: ${targetCfg.protocol.toUpperCase()}`);
+                if (targetCfg.security === 'reality') {
+                    addLog('info', `Security: XTLS Reality`);
+                    addLog('info', `Fingerprint: ${targetCfg.fp || 'chrome'}`);
+                }
+                
+                setTimeout(() => {
+                    isConnected = true;
+                    duration = 0;
+                    document.getElementById('connect-btn').classList.remove('animate-pulse');
+                    document.getElementById('connect-btn').style.background = '#4CAF50';
+                    document.getElementById('btn-text').textContent = 'Отключить';
+                    document.getElementById('status-dot').style.background = '#4CAF50';
+                    document.getElementById('status-text').textContent = 'Подключено';
+                    document.getElementById('status-text').style.color = '#4CAF50';
+                    document.getElementById('stats-row').style.display = 'flex';
+                    document.getElementById('stats-status').textContent = 'Подключено';
+                    document.getElementById('stats-status').style.color = '#4CAF50';
+                    document.getElementById('stats-server').textContent = targetCfg.name;
+                    
+                    addLog('info', 'TLS/REALITY handshake completed');
+                    addLog('info', 'Connection established successfully');
+                    
+                    connectionInterval = setInterval(() => {
+                        duration++;
+                        const down = Math.floor(Math.random() * 5000000);
+                        const up = Math.floor(Math.random() * 500000);
+                        document.getElementById('stat-down').textContent = formatBytes(down) + '/с';
+                        document.getElementById('stat-up').textContent = formatBytes(up) + '/с';
+                        document.getElementById('stat-time').textContent = formatDuration(duration);
+                        document.getElementById('stats-total-down').textContent = formatBytes(duration * 250000);
+                        document.getElementById('stats-total-up').textContent = formatBytes(duration * 50000);
+                    }, 1000);
+                }, 2000);
+            }
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        function formatDuration(s) {
+            const h = Math.floor(s / 3600).toString().padStart(2, '0');
+            const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+            const sec = (s % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${sec}`;
+        }
+        
+        function addLog(level, message) {
+            const id = 'log-' + Date.now() + '-' + Math.random();
+            const timestamp = Date.now();
+            logs.push({ id, level, message, timestamp });
+            renderLogs();
+        }
+        
+        let logFilter = 'all';
+        function setLogFilter(filter) {
+            logFilter = filter;
+            document.querySelectorAll('.log-filter').forEach(f => f.classList.remove('active'));
+            event.target.classList.add('active');
+            renderLogs();
+        }
+        
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            const filtered = logFilter === 'all' ? logs : logs.filter(l => l.level === logFilter);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="#6c6c6c" style="width: 48px; height: 48px;"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z"/></svg>
+                        <div class="empty-title">Логов пока нет</div>
+                        <div class="empty-sub">Логи появятся после подключения</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const colors = { debug: '#6c6c6c', info: '#2196F3', warning: '#FFC107', error: '#F44336' };
+            container.innerHTML = filtered.slice().reverse().map(l => {
+                const time = new Date(l.timestamp).toLocaleTimeString('ru-RU');
+                return `<div class="log-item">
+                    <svg viewBox="0 0 24 24" fill="${colors[l.level]}"><path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"/></svg>
+                    <span class="log-time">${time}</span>
+                    <span class="log-tag">[VPN]</span>
+                    <span class="log-msg">${l.message}</span>
+                </div>`;
+            }).join('');
+        }
+        
+        function showAddModal() {
+            document.getElementById('add-modal').classList.add('active');
+            // Reset subscription tab
+            document.getElementById('sub-preview').style.display = 'none';
+            subscriptionConfigs = [];
+        }
+        
+        function hideAddModal() {
+            document.getElementById('add-modal').classList.remove('active');
+            document.getElementById('add-subscription').style.display = 'none';
+            document.getElementById('add-link').style.display = 'none';
+            document.getElementById('add-manual').style.display = 'block';
+            document.getElementById('sub-preview').style.display = 'none';
+            document.querySelectorAll('.tab-top').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab-top').classList.add('active');
+            subscriptionConfigs = [];
+        }
+        
+        function setAddTab(el, tab) {
+            document.querySelectorAll('.tab-top').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('add-manual').style.display = tab === 'manual' ? 'block' : 'none';
+            document.getElementById('add-link').style.display = tab === 'link' ? 'block' : 'none';
+            document.getElementById('add-subscription').style.display = tab === 'subscription' ? 'block' : 'none';
+        }
+        
+        function onProtocolChange() {
+            const proto = document.getElementById('form-protocol').value;
+            const label = document.getElementById('form-auth-label');
+            label.textContent = (proto === 'vmess' || proto === 'vless') ? 'UUID' : 'Пароль';
+        }
+        
+        function setSecurity(sec, el) {
+            currentSecurity = sec;
+            document.querySelectorAll('#security-chips .chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('reality-fields').style.display = sec === 'reality' ? 'block' : 'none';
+        }
+        
+        function setFp(fp, el) {
+            currentFp = fp;
+            const parent = el.parentElement;
+            parent.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+        
+        function parseLinkInput() {
+            const link = document.getElementById('link-input').value.trim();
+            if (!link) return;
+            
+            let parsed = null;
+            
+            if (link.startsWith('vless://')) {
+                try {
+                    const url = new URL(link);
+                    const params = new URLSearchParams(url.search);
+                    const fragmentName = url.hash ? decodeURIComponent(url.hash.slice(1)) : '';
+                    parsed = {
+                        name: fragmentName || params.get('remark') || params.get('name') || 'VLESS Server',
+                        protocol: 'vless',
+                        server: url.hostname,
+                        port: parseInt(url.port) || 443,
+                        uuid: url.username,
+                        security: params.get('security') || 'tls',
+                        network: params.get('type') || 'tcp',
+                        path: params.get('path') || '',
+                        host: params.get('host') || '',
+                        pbk: params.get('pbk') || '',
+                        sid: params.get('sid') || '',
+                        fp: params.get('fp') || '',
+                        spiderX: params.get('spx') || params.get('spiderX') || '',
+                        flow: params.get('flow') || '',
+                        sni: params.get('sni') || '',
+                        headerType: params.get('headerType') || '',
+                        encryption: params.get('encryption') || '',
+                    };
+                } catch(e) { console.error(e); }
+            }
+            else if (link.startsWith('vmess://')) {
+                try {
+                    const json = JSON.parse(atob(link.slice(8)));
+                    parsed = {
+                        name: json.ps || 'VMess Server',
+                        protocol: 'vmess',
+                        server: json.add,
+                        port: parseInt(json.port),
+                        uuid: json.id,
+                        security: json.scy || json.tls || 'auto',
+                        network: json.net || 'tcp',
+                        path: json.path || '',
+                        host: json.host || '',
+                    };
+                } catch(e) { console.error(e); }
+            }
+            
+            if (parsed) {
+                const newCfg = { ...parsed, id: 'cfg-' + Date.now(), createdAt: Date.now(), isActive: false };
+                configs.push(newCfg);
+                localStorage.setItem('vpn_configs', JSON.stringify(configs));
+                if (!activeConfigId) selectConfig(newCfg.id);
+                hideAddModal();
+                renderConfigs();
+                alert('Конфигурация добавлена!');
+            } else {
+                alert('Не удалось распознать ссылку');
+            }
+        }
+        
+        function parseSubscriptionDemo() {
+            const url = document.getElementById('sub-input').value.trim();
+            if (!url) {
+                alert('Введите URL подписки');
+                return;
+            }
+            
+            // Simulate subscription parsing with demo data
+            subscriptionConfigs = [
+                {
+                    name: 'VLESS Reality #1',
+                    protocol: 'vless',
+                    server: 'example.com',
+                    port: 443,
+                    uuid: '00000000-0000-4000-8000-000000000000',
+                    security: 'reality',
+                    network: 'tcp',
+                    pbk: 'examplePublicKeyOne',
+                    sid: 'exampleSidOne',
+                    fp: 'chrome',
+                    flow: 'xtls-rprx-vision',
+                },
+                {
+                    name: 'VLESS Reality #2',
+                    protocol: 'vless',
+                    server: 'example.net',
+                    port: 8443,
+                    uuid: '11111111-1111-4111-8111-111111111111',
+                    security: 'reality',
+                    network: 'tcp',
+                    pbk: 'examplePublicKeyTwo',
+                    sid: 'exampleSidTwo',
+                    fp: 'safari',
+                    flow: 'xtls-rprx-vision',
+                },
+                {
+                    name: 'VMess TLS',
+                    protocol: 'vmess',
+                    server: 'server.example.com',
+                    port: 443,
+                    uuid: '3da9c661-ec8f-4bf4-83cb-6db5b2a5e93c',
+                    security: 'tls',
+                    network: 'ws',
+                    path: '/ws',
+                    host: 'server.example.com',
+                }
+            ];
+            
+            const subList = document.getElementById('sub-list');
+            subList.innerHTML = subscriptionConfigs.map((c, i) => `
+                <div class="sub-item">
+                    <div class="sub-icon">
+                        <svg viewBox="0 0 24 24" fill="${getProtocolColor(c.protocol)}" style="width: 16px; height: 16px;">
+                            <path d="${getProtocolPath(c.protocol)}"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600;">${c.name}</div>
+                        <div style="font-size: 12px; color: #a0a0a0;">•••••••• • ${c.protocol.toUpperCase()}</div>
+                        ${c.security === 'reality' ? '<div style="font-size: 11px; color: #e94560; font-weight: 600;">Reality</div>' : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('sub-preview').style.display = 'block';
+        }
+        
+        function saveSubscriptionConfigs() {
+            if (subscriptionConfigs.length === 0) return;
+            
+            subscriptionConfigs.forEach(c => {
+                configs.push({ 
+                    ...c, 
+                    id: 'cfg-' + Date.now() + '-' + Math.random().toString(36).substr(2,5), 
+                    createdAt: Date.now(), 
+                    isActive: false 
+                });
+            });
+            localStorage.setItem('vpn_configs', JSON.stringify(configs));
+            
+            if (!activeConfigId) selectConfig(configs[0].id);
+            
+            hideAddModal();
+            renderConfigs();
+            alert(`Импортировано ${subscriptionConfigs.length} конфигураций!`);
+            subscriptionConfigs = [];
+        }
+        
+        function saveConfig() {
+            const protocol = document.getElementById('form-protocol').value;
+            const name = document.getElementById('form-name').value;
+            const server = document.getElementById('form-server').value;
+            const port = parseInt(document.getElementById('form-port').value);
+            const auth = document.getElementById('form-auth').value;
+            
+            if (!name || !server || !port) {
+                alert('Заполните обязательные поля');
+                return;
+            }
+            
+            const config = {
+                id: 'cfg-' + Date.now(),
+                name,
+                protocol,
+                server,
+                port,
+                uuid: (protocol === 'vmess' || protocol === 'vless') ? auth : undefined,
+                password: (protocol === 'shadowsocks' || protocol === 'trojan') ? auth : undefined,
+                method: protocol === 'shadowsocks' ? 'aes-256-gcm' : undefined,
+                security: currentSecurity,
+                network: 'tcp',
+                createdAt: Date.now(),
+            };
+            
+            if (currentSecurity === 'reality') {
+                config.pbk = document.getElementById('form-pbk').value;
+                config.sid = document.getElementById('form-sid').value;
+                config.fp = currentFp;
+                config.flow = 'xtls-rprx-vision';
+            }
+            
+            configs.push(config);
+            localStorage.setItem('vpn_configs', JSON.stringify(configs));
+            
+            if (!activeConfigId) {
+                selectConfig(config.id);
+            }
+            
+            hideAddModal();
+            renderConfigs();
+            showNotification('Конфигурация добавлена', `Добавлен сервер: ${name}`);
+            
+            // Reset form
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-server').value = '';
+            document.getElementById('form-port').value = '';
+            document.getElementById('form-auth').value = '';
+            document.getElementById('form-pbk').value = '';
+            document.getElementById('form-sid').value = '';
+        }
+        
+        // Notifications
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                alert('Уведомления не поддерживаются в этом браузере');
+                return false;
+            }
+            const permission = await Notification.requestPermission();
+            return permission === 'granted';
+        }
+        
+        function showNotification(title, body) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, { body, icon: '/favicon.png' });
+            }
+            // Also try Electron
+            if (window.electronAPI?.showNotification) {
+                window.electronAPI.showNotification({ title, body });
+            }
+        }
+        
+        // Init
+        if (configs.length > 0 && !activeConfigId) {
+            selectConfig(configs[0].id);
+        }
+        renderConfigs();
+        renderLogs();
+        
+        // Request notification permission on first load
+        if ('Notification' in window && Notification.permission === 'default') {
+            requestNotificationPermission();
+        }
+    </script>
+</body>
+</html>

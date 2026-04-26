@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPN Client - Demo</title>
+  <style>
+    :root {
+      --bg: #030405;
+      --panel: #080c0f;
+      --panel-2: #0d1418;
+      --panel-3: #101b20;
+      --line: #17333c;
+      --line-strong: #225262;
+      --text: #eefbff;
+      --muted: #86a3ad;
+      --faint: #526870;
+      --accent: #00aeef;
+      --accent-2: #00d2be;
+      --direct: #9aa4ad;
+      --warn: #f6c453;
+      --danger: #ff5c7a;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button, input, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    .app {
+      width: 100vw;
+      height: 100vh;
+      min-width: 360px;
+      display: grid;
+      grid-template-rows: 1fr 74px;
+      background:
+        radial-gradient(circle at 50% 16%, rgba(0, 174, 239, .16), transparent 30%),
+        linear-gradient(180deg, #050708 0%, #030405 100%);
+      overflow: hidden;
+    }
+    .screen {
+      display: none;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 18px;
+      scrollbar-color: var(--line-strong) var(--bg);
+      scrollbar-width: thin;
+    }
+    .screen::-webkit-scrollbar { width: 10px; }
+    .screen::-webkit-scrollbar-track { background: var(--bg); }
+    .screen::-webkit-scrollbar-thumb {
+      background: var(--line-strong);
+      border: 2px solid var(--bg);
+      border-radius: 999px;
+    }
+    .screen.active { display: block; }
+    .top-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 32px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--faint);
+      box-shadow: 0 0 0 3px rgba(82, 104, 112, .14);
+    }
+    .hero {
+      display: grid;
+      place-items: center;
+      padding: 16px 0 20px;
+    }
+    .connect-btn {
+      width: min(176px, 49vw);
+      aspect-ratio: 1;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: #050809;
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 9px;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(0, 174, 239, .1), 0 22px 58px rgba(0, 174, 239, .18);
+      transition: transform .18s, background .18s, color .18s, border-color .18s;
+    }
+    .connect-btn:active { transform: scale(.97); }
+    .connect-btn svg { width: 52px; height: 52px; fill: currentColor; }
+    .connect-btn span { font-size: 16px; font-weight: 900; }
+    .connect-btn.connecting {
+      color: var(--warn);
+      border-color: rgba(246, 196, 83, .55);
+      box-shadow: 0 22px 58px rgba(246, 196, 83, .13);
+    }
+    .connect-btn.connected {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #001014;
+      border-color: transparent;
+      box-shadow: 0 0 0 1px rgba(0, 210, 190, .18), 0 24px 64px rgba(0, 210, 190, .26);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 18px;
+    }
+    .stat, .card, .group, .notice {
+      background: rgba(8, 12, 15, .94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .stat {
+      min-width: 0;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stat-label { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    h1 {
+      font-size: 24px;
+      line-height: 1.12;
+      margin: 0 0 16px;
+      letter-spacing: 0;
+    }
+    .section-title {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin: 18px 0 10px;
+    }
+    .card {
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 174, 239, .14);
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+    .icon svg { width: 24px; height: 24px; fill: currentColor; }
+    .card-main { min-width: 0; flex: 1; }
+    .card-title { font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-sub { margin-top: 4px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 174, 239, .13);
+      color: var(--accent);
+      border: 1px solid rgba(0, 174, 239, .24);
+      font-size: 11px;
+      font-weight: 900;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+    .badge.direct {
+      background: rgba(154, 164, 173, .12);
+      color: var(--direct);
+      border-color: rgba(154, 164, 173, .22);
+    }
+    .list { display: grid; gap: 10px; }
+    .list .card { cursor: pointer; }
+    .list .card.selected {
+      border-color: rgba(0, 174, 239, .64);
+      background: rgba(0, 174, 239, .08);
+    }
+    .notice {
+      display: flex;
+      gap: 10px;
+      padding: 13px;
+      color: var(--warn);
+      line-height: 1.35;
+      font-size: 13px;
+    }
+    .notice svg { flex: 0 0 auto; width: 22px; height: 22px; fill: currentColor; }
+    .group { overflow: hidden; margin-bottom: 14px; }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px;
+      border-top: 1px solid var(--line);
+    }
+    .row:first-child { border-top: 0; }
+    .row-title { font-weight: 900; }
+    .row-desc { margin-top: 3px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .muted { color: var(--muted); }
+    .route-pill {
+      border: 1px solid var(--line-strong);
+      background: rgba(0, 174, 239, .1);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .route-pill.direct {
+      color: var(--direct);
+      background: rgba(154, 164, 173, .08);
+      border-color: rgba(154, 164, 173, .2);
+    }
+    .delete {
+      border: 0;
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      font-weight: 900;
+      padding: 7px;
+    }
+    .form {
+      display: grid;
+      grid-template-columns: 1fr 116px;
+      gap: 9px;
+      margin-top: 10px;
+    }
+    .form .primary { grid-column: 1 / -1; }
+    .input, .select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: #050809;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 11px 12px;
+      outline: none;
+    }
+    .input:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0, 174, 239, .14); }
+    .primary {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px;
+      color: #001014;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+    .segment {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .segment.active {
+      color: #001014;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+    .logs { display: grid; gap: 8px; }
+    .log {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+      color: #d9f6ff;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .log time { color: var(--muted); font-family: Consolas, monospace; margin-right: 8px; }
+    .toggle {
+      width: 46px;
+      height: 26px;
+      border-radius: 999px;
+      background: #172126;
+      border: 1px solid var(--line);
+      padding: 2px;
+      flex: 0 0 auto;
+    }
+    .toggle:before {
+      content: "";
+      display: block;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--muted);
+      transition: transform .18s, background .18s;
+    }
+    .toggle.active { background: rgba(0, 174, 239, .16); border-color: var(--accent); }
+    .toggle.active:before { transform: translateX(20px); background: var(--accent); }
+    .tabs {
+      height: 74px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      background: rgba(5, 8, 9, .98);
+      border-top: 1px solid var(--line);
+    }
+    .tab {
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .tab.active { color: var(--accent); }
+    .tab svg { width: 23px; height: 23px; fill: currentColor; }
+    .tab span {
+      max-width: 100%;
+      padding: 0 3px;
+      font-size: 10.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @media (max-width: 390px) {
+      .screen { padding: 14px; }
+      .form { grid-template-columns: 1fr; }
+      .tab span { font-size: 10px; }
+      .stats { gap: 8px; }
+      .stat { padding: 10px 5px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="screen active" id="screen-home">
+      <div class="top-status"><span class="dot" id="status-dot"></span><span id="status-text">Не подключено</span></div>
+      <div class="hero">
+        <button class="connect-btn" id="connect-btn" type="button" onclick="toggleConnection()">
+          <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17-1.42 1.42A7 7 0 1 1 7.59 6.59L6.17 5.17A9 9 0 1 0 21 12a8.96 8.96 0 0 0-3.17-6.83z"/></svg>
+          <span id="btn-text">Подключиться</span>
+        </button>
+      </div>
+      <div class="stats" id="stats-row" style="display:none">
+        <div class="stat"><div class="stat-value" id="stat-down">0 B/с</div><div class="stat-label">Загрузка</div></div>
+        <div class="stat"><div class="stat-value" id="stat-up">0 B/с</div><div class="stat-label">Отправка</div></div>
+        <div class="stat"><div class="stat-value" id="stat-time">00:00:00</div><div class="stat-label">Время</div></div>
+      </div>
+      <div class="section-title">Текущая конфигурация</div>
+      <article class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div>
+        <div class="card-main">
+          <div class="card-title" id="home-config-name"></div>
+          <div class="card-sub" id="home-config-meta"></div>
+        </div>
+      </article>
+      <div class="section-title">Маршрутизация</div>
+      <article class="card">
+        <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 5h6v6H3V5zm12 0h6v6h-6V5zM3 15h6v6H3v-6zm12 0h6v6h-6v-6z"/></svg></div>
+        <div class="card-main">
+          <div class="card-title" id="routing-summary"></div>
+          <div class="card-sub" id="engine-summary"></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="screen" id="screen-configs">
+      <h1>Конфигурации</h1>
+      <div class="list" id="config-list"></div>
+      <form class="form" onsubmit="addConfig(event)">
+        <input class="input" id="new-name" placeholder="Название сервера" value="My VLESS Server">
+        <input class="input" id="new-server" placeholder="server.example.com" value="server.example.com">
+        <button class="primary" type="submit">Добавить демо-конфиг</button>
+      </form>
+    </section>
+
+    <section class="screen" id="screen-routes">
+      <h1>Маршруты</h1>
+      <div class="segmented">
+        <button class="segment" id="default-direct" type="button" onclick="setDefaultRoute('direct')">Остальное без VPN</button>
+        <button class="segment" id="default-vpn" type="button" onclick="setDefaultRoute('vpn')">Остальное через VPN</button>
+      </div>
+      <div class="notice">
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        <div>Сайты и приложения сохраняются как правила. Реальная раздельная маршрутизация в Windows потребует xray/v2ray core и TUN/WFP-драйвер.</div>
+      </div>
+
+      <div class="section-title">Сайты</div>
+      <div class="group" id="site-rules"></div>
+      <form class="form" onsubmit="addSiteRule(event)">
+        <input class="input" id="site-input" placeholder="youtube.com или *.example.com">
+        <select class="select" id="site-route">
+          <option value="vpn">Через VPN</option>
+          <option value="direct">Без VPN</option>
+        </select>
+        <button class="primary" type="submit">Добавить сайт</button>
+      </form>
+
+      <div class="section-title">Приложения</div>
+      <div class="group" id="app-rules"></div>
+      <form class="form" onsubmit="addAppRule(event)">
+        <input class="input" id="app-input" placeholder="Telegram.exe или полный путь">
+        <select class="select" id="app-route">
+          <option value="vpn">Через VPN</option>
+          <option value="direct">Без VPN</option>
+        </select>
+        <button class="primary" type="submit">Добавить приложение</button>
+      </form>
+    </section>
+
+    <section class="screen" id="screen-logs">
+      <h1>Логи</h1>
+      <div class="logs" id="logs"></div>
+    </section>
+
+    <section class="screen" id="screen-settings">
+      <h1>Настройки</h1>
+      <div class="group">
+        <div class="row"><div><div class="row-title">Черная тема</div><div class="row-desc">Черный фон и голубой акцент Mercedes/Petronas</div></div><div class="toggle active"></div></div>
+        <div class="row"><div><div class="row-title">Управление из приложения</div><div class="row-desc">Кнопка подключается через Electron main-process</div></div><div class="toggle active"></div></div>
+        <div class="row"><div><div class="row-title">Автоподключение</div><div class="row-desc">Подключаться при запуске</div></div><div class="toggle"></div></div>
+      </div>
+      <div class="group">
+        <div class="row"><div><div class="row-title">Локальный core</div><div class="row-desc">bin/xray.exe или bin/v2ray.exe внутри приложения</div></div><strong class="muted" id="core-state">Не найден</strong></div>
+        <div class="row"><div><div class="row-title">Режим</div><div class="row-desc">Сейчас правила применяются в состоянии приложения</div></div><strong class="muted" id="engine-state">Managed demo</strong></div>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" type="button" onclick="switchTab('home', this)"><svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg><span>Главная</span></button>
+      <button class="tab" type="button" onclick="switchTab('configs', this)"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg><span>Конфиги</span></button>
+      <button class="tab" type="button" onclick="switchTab('routes', this)"><svg viewBox="0 0 24 24"><path d="M9 3 5 7l4 4V8h7a3 3 0 0 1 0 6h-1v2h1a5 5 0 0 0 0-10H9V3zm6 10v3H8a3 3 0 0 1 0-6h1V8H8a5 5 0 0 0 0 10h7v3l4-4-4-4z"/></svg><span>Маршруты</span></button>
+      <button class="tab" type="button" onclick="switchTab('logs', this)"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg><span>Логи</span></button>
+      <button class="tab" type="button" onclick="switchTab('settings', this)"><svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.28 7.28 0 0 0-1.69-.98L14.5 2.42A.49.49 0 0 0 14 2h-4a.49.49 0 0 0-.49.42L9.13 5.07c-.61.23-1.18.55-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46c-.12.22-.07.49.12.64l2.11 1.65c-.04.32-.08.65-.08.98s.03.66.08.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.13.22.39.31.61.22l2.49-1c.51.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.49.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.18-.58 1.69-.98l2.49 1c.22.08.48 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg><span>Настройки</span></button>
+    </nav>
+  </main>
+
+  <script>
+    const defaultConfig = {
+      id: "demo-vless-reality",
+      name: "Demo VLESS Reality",
+      protocol: "vless",
+      server: "demo.vpn.local",
+      port: 443,
+      security: "REALITY"
+    };
+    const defaultRouting = {
+      defaultRoute: "direct",
+      sites: [
+        { id: "site-youtube", value: "youtube.com", route: "vpn" },
+        { id: "site-instagram", value: "instagram.com", route: "vpn" },
+        { id: "site-bank", value: "online.sberbank.ru", route: "direct" }
+      ],
+      apps: [
+        { id: "app-telegram", value: "Telegram.exe", route: "vpn" },
+        { id: "app-discord", value: "Discord.exe", route: "vpn" },
+        { id: "app-edge", value: "msedge.exe", route: "direct" }
+      ]
+    };
+
+    let configs = JSON.parse(localStorage.getItem("vpn_configs") || "null") || [defaultConfig];
+    let routing = JSON.parse(localStorage.getItem("vpn_routing") || "null") || defaultRouting;
+    let activeConfigId = localStorage.getItem("vpn_active_config") || configs[0].id;
+    let isConnected = false;
+    let duration = 0;
+    let timer = null;
+    let logs = JSON.parse(localStorage.getItem("vpn_logs") || "[]").map(l => ({ ...l, time: new Date(l.time) }));
+    let engine = { coreFound: false, engine: "managed-demo" };
+
+    function activeConfig() {
+      return configs.find(c => c.id === activeConfigId) || configs[0];
+    }
+
+    function saveState() {
+      localStorage.setItem("vpn_configs", JSON.stringify(configs));
+      localStorage.setItem("vpn_routing", JSON.stringify(routing));
+      localStorage.setItem("vpn_active_config", activeConfigId);
+      localStorage.setItem("vpn_logs", JSON.stringify(logs.slice(0, 80)));
+    }
+
+    function switchTab(name, button) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.querySelector("#screen-" + name).classList.add("active");
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      button.classList.add("active");
+      renderAll();
+    }
+
+    function renderAll() {
+      renderHome();
+      renderConfigs();
+      renderRoutes();
+      renderLogs();
+      renderSettings();
+    }
+
+    function renderHome() {
+      const cfg = activeConfig();
+      document.querySelector("#home-config-name").textContent = cfg.name;
+      document.querySelector("#home-config-meta").innerHTML =
+        `<span class="badge">${cfg.protocol.toUpperCase()}</span><span class="badge">${cfg.security}</span>${escapeHtml(cfg.server)}:${cfg.port}`;
+      const vpnRules = routing.sites.filter(r => r.route === "vpn").length + routing.apps.filter(r => r.route === "vpn").length;
+      const directRules = routing.sites.filter(r => r.route === "direct").length + routing.apps.filter(r => r.route === "direct").length;
+      document.querySelector("#routing-summary").textContent =
+        `${vpnRules} через VPN / ${directRules} без VPN`;
+      document.querySelector("#engine-summary").textContent =
+        `Остальное: ${routing.defaultRoute === "vpn" ? "через VPN" : "без VPN"} · ${engine.coreFound ? "core найден" : "core не найден"}`;
+    }
+
+    function renderConfigs() {
+      const list = document.querySelector("#config-list");
+      list.innerHTML = configs.map(c => `
+        <article class="card ${c.id === activeConfigId ? "selected" : ""}" onclick="selectConfig('${c.id}')">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div>
+          <div class="card-main">
+            <div class="card-title">${escapeHtml(c.name)}</div>
+            <div class="card-sub"><span class="badge">${c.protocol.toUpperCase()}</span>${escapeHtml(c.server)}:${c.port}</div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderRoutes() {
+      document.querySelector("#default-direct").classList.toggle("active", routing.defaultRoute === "direct");
+      document.querySelector("#default-vpn").classList.toggle("active", routing.defaultRoute === "vpn");
+      document.querySelector("#site-rules").innerHTML = routing.sites.map(rule => renderRule(rule, "site")).join("");
+      document.querySelector("#app-rules").innerHTML = routing.apps.map(rule => renderRule(rule, "app")).join("");
+    }
+
+    function renderRule(rule, type) {
+      const routeClass = rule.route === "direct" ? "direct" : "";
+      return `
+        <div class="row">
+          <div class="card-main">
+            <div class="row-title">${escapeHtml(rule.value)}</div>
+            <div class="row-desc">${type === "site" ? "Сайт / домен" : "Приложение Windows"}</div>
+          </div>
+          <button class="route-pill ${routeClass}" type="button" onclick="toggleRuleRoute('${type}', '${rule.id}')">${routeLabel(rule.route)}</button>
+          <button class="delete" type="button" onclick="deleteRule('${type}', '${rule.id}')">×</button>
+        </div>
+      `;
+    }
+
+    function renderLogs() {
+      const root = document.querySelector("#logs");
+      if (logs.length === 0) {
+        root.innerHTML = `<div class="card"><div class="card-main"><div class="card-title">Логов пока нет</div><div class="card-sub">Логи появятся после подключения</div></div></div>`;
+        return;
+      }
+      root.innerHTML = logs.map(l => `<div class="log"><time>${new Date(l.time).toLocaleTimeString()}</time>${escapeHtml(l.message)}</div>`).join("");
+    }
+
+    function renderSettings() {
+      document.querySelector("#core-state").textContent = engine.coreFound ? "Найден" : "Не найден";
+      document.querySelector("#engine-state").textContent = engine.engine === "xray-ready" ? "Xray ready" : "Managed demo";
+    }
+
+    function selectConfig(id) {
+      activeConfigId = id;
+      saveState();
+      renderAll();
+    }
+
+    function addConfig(event) {
+      event.preventDefault();
+      const name = document.querySelector("#new-name").value.trim() || "New VLESS Server";
+      const server = document.querySelector("#new-server").value.trim() || "server.example.com";
+      const config = { id: "cfg-" + Date.now(), name, protocol: "vless", server, port: 443, security: "TLS" };
+      configs.push(config);
+      activeConfigId = config.id;
+      addLog("Конфигурация добавлена: " + name);
+      saveState();
+      renderAll();
+    }
+
+    function setDefaultRoute(route) {
+      routing.defaultRoute = route;
+      addLog("Маршрут по умолчанию: " + routeLabel(route));
+      saveState();
+      renderAll();
+    }
+
+    function addSiteRule(event) {
+      event.preventDefault();
+      const input = document.querySelector("#site-input");
+      const value = normalizeRuleValue(input.value);
+      if (!value) return;
+      routing.sites.push({ id: "site-" + Date.now(), value, route: document.querySelector("#site-route").value });
+      input.value = "";
+      addLog("Добавлено правило сайта: " + value);
+      saveState();
+      renderAll();
+    }
+
+    function addAppRule(event) {
+      event.preventDefault();
+      const input = document.querySelector("#app-input");
+      const value = input.value.trim();
+      if (!value) return;
+      routing.apps.push({ id: "app-" + Date.now(), value, route: document.querySelector("#app-route").value });
+      input.value = "";
+      addLog("Добавлено правило приложения: " + value);
+      saveState();
+      renderAll();
+    }
+
+    function toggleRuleRoute(type, id) {
+      const list = type === "site" ? routing.sites : routing.apps;
+      const rule = list.find(r => r.id === id);
+      if (!rule) return;
+      rule.route = rule.route === "vpn" ? "direct" : "vpn";
+      addLog(`${type === "site" ? "Сайт" : "Приложение"} ${rule.value}: ${routeLabel(rule.route)}`);
+      saveState();
+      renderAll();
+    }
+
+    function deleteRule(type, id) {
+      const key = type === "site" ? "sites" : "apps";
+      routing[key] = routing[key].filter(r => r.id !== id);
+      addLog((type === "site" ? "Удалено правило сайта" : "Удалено правило приложения"));
+      saveState();
+      renderAll();
+    }
+
+    async function toggleConnection() {
+      if (isConnected) {
+        await disconnect();
+        return;
+      }
+      const btn = document.querySelector("#connect-btn");
+      btn.className = "connect-btn connecting";
+      document.querySelector("#btn-text").textContent = "Подключение...";
+      document.querySelector("#status-text").textContent = "Подключение...";
+      document.querySelector("#status-text").style.color = "var(--warn)";
+      document.querySelector("#status-dot").style.background = "var(--warn)";
+      addLog("Передача команды подключения в Electron main-process");
+
+      const response = window.electronAPI?.connectVpn
+        ? await window.electronAPI.connectVpn({ config: activeConfig(), routing })
+        : { ok: true, coreFound: false, engine: "browser-demo", routingSummary: {} };
+      engine = response;
+
+      setTimeout(() => {
+        isConnected = true;
+        duration = 0;
+        btn.className = "connect-btn connected";
+        document.querySelector("#btn-text").textContent = "Отключить";
+        document.querySelector("#status-text").textContent = "Подключено";
+        document.querySelector("#status-text").style.color = "var(--accent-2)";
+        document.querySelector("#status-dot").style.background = "var(--accent-2)";
+        document.querySelector("#stats-row").style.display = "grid";
+        addLog(`Применены правила: ${routing.apps.length} приложений, ${routing.sites.length} сайтов`);
+        addLog(response.coreFound ? "Локальный core найден, готов к интеграции" : "Локальный xray/v2ray core не найден, режим управляемого демо");
+        tickStats();
+        timer = setInterval(tickStats, 1000);
+        showNotification("VPN Client", "Подключено через приложение");
+        renderAll();
+      }, 700);
+    }
+
+    async function disconnect() {
+      if (window.electronAPI?.disconnectVpn) await window.electronAPI.disconnectVpn();
+      isConnected = false;
+      clearInterval(timer);
+      timer = null;
+      document.querySelector("#connect-btn").className = "connect-btn";
+      document.querySelector("#btn-text").textContent = "Подключиться";
+      document.querySelector("#status-text").textContent = "Не подключено";
+      document.querySelector("#status-text").style.color = "var(--muted)";
+      document.querySelector("#status-dot").style.background = "var(--faint)";
+      document.querySelector("#stats-row").style.display = "none";
+      addLog("Отключено через Electron main-process");
+      showNotification("VPN Client", "Отключено");
+      renderAll();
+    }
+
+    function tickStats() {
+      duration += 1;
+      const down = 180000 + Math.floor(Math.random() * 3600000);
+      const up = 30000 + Math.floor(Math.random() * 520000);
+      document.querySelector("#stat-down").textContent = formatBytes(down) + "/с";
+      document.querySelector("#stat-up").textContent = formatBytes(up) + "/с";
+      document.querySelector("#stat-time").textContent = formatDuration(duration);
+    }
+
+    function addLog(message) {
+      logs.unshift({ time: new Date(), message });
+      logs = logs.slice(0, 80);
+      saveState();
+      renderLogs();
+    }
+
+    function routeLabel(route) {
+      return route === "vpn" ? "Через VPN" : "Без VPN";
+    }
+
+    function normalizeRuleValue(value) {
+      return value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+    }
+
+    function formatBytes(bytes) {
+      const units = ["B", "KB", "MB", "GB"];
+      let value = bytes;
+      let unit = 0;
+      while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit += 1;
+      }
+      return value.toFixed(value >= 10 || unit === 0 ? 0 : 1) + " " + units[unit];
+    }
+
+    function formatDuration(s) {
+      const h = String(Math.floor(s / 3600)).padStart(2, "0");
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+      const sec = String(s % 60).padStart(2, "0");
+      return `${h}:${m}:${sec}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
+    }
+
+    function showNotification(title, body) {
+      if (window.electronAPI?.showNotification) window.electronAPI.showNotification({ title, body });
+    }
+
+    window.electronAPI?.onTrayConnect?.(() => {
+      if (!isConnected) toggleConnection();
+    });
+    window.electronAPI?.onTrayDisconnect?.(() => {
+      if (isConnected) disconnect();
+    });
+
+    window.electronAPI?.getVpnStatus?.().then(status => {
+      engine = status.coreFound ? { coreFound: true, engine: "xray-ready" } : { coreFound: false, engine: "managed-demo" };
+      renderAll();
+    });
+
+    renderAll();
+    saveState();
+  </script>
+</body>
+</html>

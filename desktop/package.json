@@ -1,0 +1,55 @@
+{
+  "name": "vpn-client-desktop",
+  "version": "1.0.0",
+  "description": "VPN Client Desktop (Windows, macOS, Linux)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "prepare:cores": "powershell -ExecutionPolicy Bypass -File ../scripts/download-cores.ps1",
+    "build": "electron-builder",
+    "prebuild:win": "npm run prepare:cores",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "dist": "npm run build:win && npm run build:mac && npm run build:linux"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^25.0.0",
+    "playwright": "^1.59.1"
+  },
+  "build": {
+    "appId": "com.vpnclient.desktop",
+    "productName": "VPN Client",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "web/**"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin"
+      }
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "web/assets/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Network"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
