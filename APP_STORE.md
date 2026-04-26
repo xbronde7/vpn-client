@@ -41,14 +41,14 @@ Edit `project/app.json`:
 {
   "expo": {
     "ios": {
-      "bundleIdentifier": "com.yourcompany.vpnclient",
+      "bundleIdentifier": "com.xbronde7.vpnclient",
       "buildNumber": "1.0.0"
     }
   }
 }
 ```
 
-Replace `com.yourcompany.vpnclient` with your real App Store bundle ID.
+Replace `com.xbronde7.vpnclient` if you want a different App Store bundle ID.
 
 ## Build iOS
 

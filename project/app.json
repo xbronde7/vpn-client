@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.vpnclient",
+      "bundleIdentifier": "com.xbronde7.vpnclient",
       "buildNumber": "1.0.0"
     },
     "android": {
@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a1a2e"
       },
-      "package": "com.yourcompany.vpnclient",
+      "package": "com.xbronde7.vpnclient",
       "versionCode": 1
     },
     "web": {
